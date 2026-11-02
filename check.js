@@ -211,7 +211,14 @@ async function runChecks() {
       } else {
         console.log(`  (no new alert needed)`);
       }
+    } catch (err) {
+      console.error(`  SSL check failed:`, err.message);
+    }
 
+    // Separate from the SSL check: a site that can't serve HTTPS
+    // (the case where you most need to know) still gets its domain
+    // registration checked.
+    try {
       const reg = await checkDomainExpiryWithRetry(hostname);
       console.log(`  Domain: ${reg.daysLeft} days left`);
       state[domainId].lastDomainDaysLeft = reg.daysLeft;
@@ -226,7 +233,7 @@ async function runChecks() {
         console.log(`  (no new alert needed)`);
       }
     } catch (err) {
-      console.error(`  SSL/domain check failed:`, err.message);
+      console.error(`  Domain expiry check failed:`, err.message);
     }
 
     let ctCerts = null;
