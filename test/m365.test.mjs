@@ -20,7 +20,8 @@ const users = [
 ];
 const base = {
   users,
-  mfa: new Map([["chad", true], ["tadmin", false], ["ana", true], ["ben", false]]),
+  // Real result from the first live run: the personal-account owner looks like "no MFA".
+  mfa: new Map([["chad", false], ["tadmin", false], ["ana", true], ["ben", false]]),
   globalAdmins: ["chad", "tadmin"],
   securityDefaults: true,
   caRequiresMfa: null,
@@ -30,9 +31,13 @@ const base = {
 
 test("Test tenant: admin without MFA is critical, Ben is high", () => {
   const f = analyzeTenant(base);
-  assert.deepEqual(keys(f), ["accounts:admin-no-mfa", "accounts:users-no-mfa", "accounts:no-mailboxes"]);
+  assert.deepEqual(keys(f), ["accounts:admin-no-mfa", "accounts:users-no-mfa", "accounts:external-admins", "accounts:no-mailboxes"]);
   assert.equal(f[0].severity, "critical");
+  assert.match(f[0].title, /^1 admin account without/);
   assert.match(f[0].detail, /testadmin@/);
+  assert.doesNotMatch(f[0].detail, /#EXT#/);
+  assert.equal(f[2].severity, "low");
+  assert.match(f[2].detail, /vigiarecon\.dev@outlook\.com/);
   assert.match(f[1].title, /1 of 4 users/);
   assert.match(f[1].detail, /ben\.test@/);
   assert.doesNotMatch(f[1].detail, /ana\.test@/);

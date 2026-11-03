@@ -175,6 +175,12 @@ async function collectForwarding(token, users) {
 
 // ---- 4. Turn facts into findings (pure, testable) ------------------
 
+// Accounts that sign in through somewhere else (a personal Microsoft
+// account, or a guest from another company) show up with "#EXT#" in
+// their sign-in name. Their two-factor lives with that other account, so
+// this tenant can't see it and we must not report it as missing.
+export const isExternalIdentity = (u) => /#EXT#@/i.test(u.userPrincipalName || "");
+
 const domainOf = (email) => String(email).split("@").pop().toLowerCase();
 const listNames = (names, max = 5) =>
   names.slice(0, max).join(", ") + (names.length > max ? ` and ${names.length - max} more` : "");
@@ -186,7 +192,8 @@ export function analyzeTenant({ users, mfa, globalAdmins, securityDefaults, caRe
   const internalDomains = new Set(users.map((u) => domainOf(u.userPrincipalName)));
 
   // Admins without two-factor
-  const adminsNoMfa = people.filter((u) => adminIds.has(u.id) && mfa.get(u.id) === false);
+  const local = people.filter((u) => !isExternalIdentity(u));
+  const adminsNoMfa = local.filter((u) => adminIds.has(u.id) && mfa.get(u.id) === false);
   if (adminsNoMfa.length) {
     out.push(finding(
       "accounts:admin-no-mfa", "accounts", "critical",
@@ -197,7 +204,7 @@ export function analyzeTenant({ users, mfa, globalAdmins, securityDefaults, caRe
   }
 
   // Everyone else without two-factor
-  const usersNoMfa = people.filter((u) => !adminIds.has(u.id) && mfa.get(u.id) === false);
+  const usersNoMfa = local.filter((u) => !adminIds.has(u.id) && mfa.get(u.id) === false);
   if (usersNoMfa.length) {
     out.push(finding(
       "accounts:users-no-mfa", "accounts", "high",
@@ -207,7 +214,17 @@ export function analyzeTenant({ users, mfa, globalAdmins, securityDefaults, caRe
     ));
   }
 
-  const unknown = people.filter((u) => mfa.get(u.id) == null).length;
+  const externalAdmins = people.filter((u) => adminIds.has(u.id) && isExternalIdentity(u));
+  if (externalAdmins.length) {
+    out.push(finding(
+      "accounts:external-admins", "accounts", "low",
+      `${externalAdmins.length} admin${externalAdmins.length > 1 ? "s" : ""} sign in with an outside account`,
+      `${listNames(externalAdmins.map((u) => u.userPrincipalName.split("#EXT#")[0].replace(/_([^_]+)$/, "@$1")))} ${externalAdmins.length > 1 ? "use accounts" : "uses an account"} from outside this organization, so two-factor can't be checked from here.`,
+      "Make sure two-step verification is on in that outside account (for a personal Microsoft account: account.microsoft.com → Security). Better: give admins a work account in this tenant."
+    ));
+  }
+
+  const unknown = local.filter((u) => mfa.get(u.id) == null).length;
   if (unknown) {
     out.push(finding(
       "accounts:mfa-unknown", "accounts", "info",
