@@ -17,22 +17,26 @@
  * active scanning stops automatically.
  *
  * Accepted record locations (either works):
- *   TXT  example.com                    "certwatch-verify=<token>"
- *   TXT  _certwatch.example.com         "certwatch-verify=<token>"
+ *   TXT  example.com                    "vigiarecon-verify=<token>"
+ *   TXT  _vigiarecon.example.com        "vigiarecon-verify=<token>"
+ *
+ * Records made before the rename ("certwatch-verify=", or at
+ * _certwatch.<domain>) still count, so nobody has to redo DNS.
  */
 
 import dns from "node:dns/promises";
 
 export function hasVerificationRecord(txtRecords, token) {
   if (!token) return false;
-  const expected = `certwatch-verify=${token}`;
-  return txtRecords.some((chunks) => chunks.join("").trim() === expected);
+  const accepted = new Set([`vigiarecon-verify=${token}`, `certwatch-verify=${token}`]);
+  return txtRecords.some((chunks) => accepted.has(chunks.join("").trim()));
 }
 
 export async function isDomainVerified(hostname, token) {
-  const [root, sub] = await Promise.all([
+  const lookups = await Promise.all([
     dns.resolveTxt(hostname).catch(() => []),
-    dns.resolveTxt(`_certwatch.${hostname}`).catch(() => []),
+    dns.resolveTxt(`_vigiarecon.${hostname}`).catch(() => []),
+    dns.resolveTxt(`_certwatch.${hostname}`).catch(() => []), // pre-rename location
   ]);
-  return hasVerificationRecord([...root, ...sub], token);
+  return hasVerificationRecord(lookups.flat(), token);
 }

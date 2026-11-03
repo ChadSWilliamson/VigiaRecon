@@ -99,7 +99,8 @@ test("Active probes confirm content, not just status", () => {
 });
 
 test("Domain verification token match", () => {
-  assert.ok(hasVerificationRecord([["certwatch-verify=abc123"]], "abc123"));
+  assert.ok(hasVerificationRecord([["vigiarecon-verify=abc123"]], "abc123"));
+  assert.ok(hasVerificationRecord([["certwatch-verify=abc123"]], "abc123")); // legacy
   assert.ok(hasVerificationRecord([["certwatch-", "verify=abc123"]], "abc123"));
   assert.ok(!hasVerificationRecord([["certwatch-verify=abc1234"]], "abc123"));
   assert.ok(!hasVerificationRecord([["certwatch-verify="]], ""));

@@ -2,6 +2,8 @@
 
 A full-stack SSL, domain, and DNS monitoring tool — built solo, end-to-end, as a hands-on learning project covering backend automation, database design, authentication, and frontend development.
 
+**Live at:** [vigiarecon.com](https://vigiarecon.com)
+
 **Status:** Functional demo. Built to explore the full lifecycle of a SaaS product — not currently in commercial production.
 
 ## What it does
@@ -27,7 +29,7 @@ Each domain gets a daily 0–100 score and letter grade, built from what an atta
 | **Vulnerability intel** (`vuln-intel.mjs`) | every domain | Open risky ports and known CVEs per IP from Shodan InternetDB; CVE severity, CISA KEV status, and EPSS from Shodan CVEDB; version-based CVE matches for software seen in headers |
 | **Active** (`active-scan.mjs`) | **verified domains only** | ~15 polite requests for leaked `.git`, `.env`, SQL dumps, config backups, `.htpasswd`, server-status, phpinfo, Spring actuator, phpMyAdmin; security.txt presence |
 
-**Ownership gate:** active checks only run after the customer adds a `certwatch-verify=<token>` DNS TXT record, re-checked every run. The database ignores any attempt to self-mark a domain verified, and the scanner refuses hostnames that resolve to private or internal addresses (SSRF protection).
+**Ownership gate:** active checks only run after the customer adds a `vigiarecon-verify=<token>` DNS TXT record (pre-rename `certwatch-verify=` records still count), re-checked every run. The database ignores any attempt to self-mark a domain verified, and the scanner refuses hostnames that resolve to private or internal addresses (SSRF protection).
 
 Try it on one domain locally: `npm run scan -- example.com` (passive only), or add `--token <token>` for active checks on a domain you've verified. Tests: `npm test`.
 
