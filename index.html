@@ -27,6 +27,9 @@
   .logo .pulse-dot{ width:9px; height:9px; border-radius:50%; background:var(--cyan); box-shadow:0 0 0 0 rgba(34,229,216,0.6); animation: pulse-dot 2s infinite; }
   @keyframes pulse-dot{ 0%{box-shadow:0 0 0 0 rgba(34,229,216,0.5);} 70%{box-shadow:0 0 0 8px rgba(34,229,216,0);} 100%{box-shadow:0 0 0 0 rgba(34,229,216,0);} }
   .navlinks{ display:flex; gap:32px; font-size:14px; color:var(--ink-soft); font-weight:500; }
+  .navlinks a{ color:inherit; text-decoration:none; }
+  .navlinks a:hover{ color:var(--ink); }
+  .feature code{ font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--ink); background:var(--bg-panel-hi); padding:1px 5px; border-radius:4px; }
   .btn{ display:inline-block; padding:13px 24px; border-radius:6px; font-weight:600; font-size:14px; text-decoration:none; border:1.5px solid var(--ink); transition:all .15s ease; }
   .btn-primary{ background:var(--cyan); color:#031311; border-color:var(--cyan); }
   .btn-primary:hover{ background:#3EEFE3; }
@@ -49,12 +52,23 @@
   .pulse-wrap{ position:relative; height:180px; }
   .pulse-wrap svg{ width:100%; height:100%; display:block; }
   .pulse-line{ fill:none; stroke:var(--cyan); stroke-width:2.5; filter:drop-shadow(0 0 6px rgba(34,229,216,0.6)); }
-  .monitor-footer{ display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line); }
+  .monitor-footer{ display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--line); }
   .monitor-stat{ padding:20px 26px; border-right:1px solid var(--line); }
   .monitor-stat:last-child{ border-right:none; }
   .monitor-stat .label{ font-size:11px; color:var(--ink-soft); letter-spacing:0.08em; margin-bottom:6px; font-family:'JetBrains Mono',monospace; }
   .monitor-stat .value{ font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; }
   .monitor-stat .value.warn{ color:var(--magenta); }
+  .monitor-stat .value.amber{ color:var(--amber); }
+
+  .recon{ border-top:1px solid var(--line); }
+  .recon .eyebrow{ margin-bottom:14px; }
+  .recon .feature .fnum{ color:var(--magenta); }
+  .tier-note{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:28px; }
+  .tier{ border:1px solid var(--line); border-radius:10px; padding:20px 22px; background:var(--bg-panel); }
+  .tier .tier-tag{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; font-weight:700; margin-bottom:8px; }
+  .tier.passive .tier-tag{ color:var(--cyan); }
+  .tier.active .tier-tag{ color:var(--amber); }
+  .tier p{ font-size:14px; color:var(--ink-soft); }
 
   .problem{ text-align:center; }
   .problem p{ font-size:26px; font-weight:500; max-width:760px; margin:0 auto; line-height:1.4; }
@@ -94,8 +108,9 @@
     h1{ font-size:42px; }
     .feature-grid, .pricing-grid{ grid-template-columns:1fr; }
     .navlinks{ display:none; }
-    .monitor-footer{ grid-template-columns:1fr; }
-    .monitor-stat{ border-right:none; border-bottom:1px solid var(--line); }
+    .monitor-footer{ grid-template-columns:1fr 1fr; }
+    .tier-note{ grid-template-columns:1fr; }
+    .monitor-stat{ border-bottom:1px solid var(--line); }
   }
 </style>
 </head>
@@ -104,16 +119,16 @@
 <nav>
   <div class="wrap navrow">
     <div class="logo"><span class="pulse-dot"></span>Vigía Recon</div>
-    <div class="navlinks"><span>Features</span><span>Pricing</span><span>For Agencies</span></div>
+    <div class="navlinks"><a href="#how">Monitoring</a><a href="#recon">Security scan</a><a href="#pricing">Pricing</a></div>
     <a href="dashboard.html" class="btn btn-ghost">Sign in</a>
   </div>
 </nav>
 
 <section class="hero">
   <div class="wrap hero-grid">
-    <div class="eyebrow">&gt; LIVE MONITORING · SSL · DOMAINS · DNS</div>
+    <div class="eyebrow">&gt; LIVE MONITORING · SSL · DNS · ATTACK SURFACE</div>
     <h1>Your site has<br>a pulse. <span class="accent">Watch it.</span></h1>
-    <p class="sub">Vigía Recon checks your SSL certificate, domain, and DNS every day — and flags the moment something flatlines, before your customers see it first.</p>
+    <p class="sub">Vigía Recon checks your SSL, domain, and DNS every day, then looks at your site the way an attacker would: spoofable email, exposed services, known vulnerabilities, leaked files. You hear about it first.</p>
     <div class="hero-cta">
       <a href="#pricing" class="btn btn-primary">Add your first site free</a>
       <a href="#how" class="btn btn-ghost">See it in action</a>
@@ -133,6 +148,7 @@
         <div class="monitor-stat"><div class="label">SSL CERT</div><div class="value warn">22 DAYS LEFT</div></div>
         <div class="monitor-stat"><div class="label">DOMAIN</div><div class="value">279 DAYS</div></div>
         <div class="monitor-stat"><div class="label">DNS</div><div class="value">STABLE</div></div>
+        <div class="monitor-stat"><div class="label">SECURITY</div><div class="value amber">B · 84/100</div></div>
       </div>
     </div>
   </div>
@@ -159,6 +175,26 @@
   </div>
 </section>
 
+<section id="recon" class="recon">
+  <div class="wrap">
+    <div class="eyebrow">&gt; RECON</div>
+    <h2>The attacker's view</h2>
+    <p class="section-lead">Attackers start with what anyone on the internet can see. So does Vigía Recon. Every domain gets a daily 0–100 security score, with each finding explained in plain English and a fix to go with it.</p>
+    <div class="feature-grid">
+      <div class="feature"><div class="fnum">01</div><h3>Email spoofing check</h3><p>Checks SPF, DMARC, and DKIM, which decide whether someone can send email pretending to be you. Weak settings are how phishing emails land in your customers' inboxes.</p></div>
+      <div class="feature"><div class="fnum">02</div><h3>Known vulnerabilities</h3><p>Matches your server's software against public CVE databases and flags the ones attackers are actively exploiting right now.</p></div>
+      <div class="feature"><div class="fnum">03</div><h3>Exposed services</h3><p>Finds databases, remote desktop, and admin ports left open to the whole internet. These are the doors ransomware walks through.</p></div>
+      <div class="feature"><div class="fnum">04</div><h3>Web hardening</h3><p>Missing security headers, leaked software versions, insecure cookies, old TLS versions, and HTTP pages that never redirect to HTTPS.</p></div>
+      <div class="feature"><div class="fnum">05</div><h3>Leaked files</h3><p>Looks for the mistakes that hand over the keys: a public <code>.git</code> folder, an <code>.env</code> file full of passwords, a database dump left behind.</p></div>
+      <div class="feature"><div class="fnum">06</div><h3>Subdomain takeover</h3><p>Spots old subdomains still pointing at deleted cloud services, which someone else could claim and serve content from under your name.</p></div>
+    </div>
+    <div class="tier-note">
+      <div class="tier passive"><div class="tier-tag">PASSIVE · EVERY DOMAIN</div><p>Public DNS, a normal page load, and what internet-wide scanners already know. Nothing a regular visitor wouldn't do.</p></div>
+      <div class="tier active"><div class="tier-tag">ACTIVE · VERIFIED DOMAINS ONLY</div><p>Leaked-file checks only run after you prove you own the domain with a DNS record. Nobody can point Vigía Recon at a site that isn't theirs.</p></div>
+    </div>
+  </div>
+</section>
+
 <section id="pricing">
   <div class="wrap">
     <h2>Pricing</h2>
@@ -166,12 +202,12 @@
     <div class="pricing-grid">
       <div class="plan">
         <div class="plan-tag">FREE</div><h3>Starter</h3><div class="price">$0<span>/mo</span></div>
-        <ul><li><b>1</b> domain</li><li>Uptime monitoring</li><li>Dashboard access</li><li>No email alerts</li></ul>
+        <ul><li><b>1</b> domain</li><li>Uptime monitoring</li><li>Security score</li><li>No email alerts</li></ul>
         <a href="#" class="btn btn-ghost">Get started</a>
       </div>
       <div class="plan featured">
         <div class="plan-tag">MOST COMMON</div><h3>Starter Pro</h3><div class="price">$9<span>/mo</span></div>
-        <ul><li><b>5</b> domains</li><li>Full monitoring suite</li><li>Email alerts</li><li>DNS + CT monitoring</li></ul>
+        <ul><li><b>5</b> domains</li><li>Full monitoring suite</li><li>Attacker's-view scan</li><li>Email alerts</li></ul>
         <a href="#" class="btn btn-primary">Start free trial</a>
       </div>
       <div class="plan">
@@ -191,7 +227,7 @@
 <section class="close">
   <div class="wrap">
     <h2>Stop finding out<br>the hard way.</h2>
-    <p>Add your first site in 30 seconds. We'll watch the vitals.</p>
+    <p>Add your first site in 30 seconds. We'll watch the vitals and the ways in.</p>
     <a href="#pricing" class="btn btn-primary">Add your first site free</a>
   </div>
 </section>
