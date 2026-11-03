@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 import { analyzeSpf, analyzeDmarc, analyzeDkimKey, scanEmailSecurity } from "../email-security.mjs";
 import { analyzeHeaders, fingerprintTech } from "../web-exposure.mjs";
-import { analyzePorts, cveFinding } from "../vuln-intel.mjs";
+import { analyzePorts, cveFinding, sharedHostFor, scanVulnIntel } from "../vuln-intel.mjs";
 import { PROBES } from "../active-scan.mjs";
 import { hasVerificationRecord } from "../domain-verify.mjs";
 import { isPrivateIp, isValidPublicHostname } from "../net-guard.mjs";
@@ -120,4 +120,36 @@ test("Scoring and ordering", () => {
   assert.equal(scoreFindings(fs), 100 - 25 - 7 - 2);
   assert.equal(gradeForScore(66), "C");
   assert.equal(sortFindings(fs)[0].severity, "critical");
+});
+
+test("Shared hosting IPs are recognized", () => {
+  assert.equal(sharedHostFor("185.199.110.153"), "GitHub Pages");
+  assert.equal(sharedHostFor("185.199.111.153"), "GitHub Pages");
+  assert.equal(sharedHostFor("104.21.5.9"), "Cloudflare");
+  assert.equal(sharedHostFor("151.101.1.195"), "Fastly");
+  assert.equal(sharedHostFor("76.76.21.21"), "Vercel");
+  assert.equal(sharedHostFor("203.0.113.7", { tags: ["cdn"] }), "a CDN");
+  assert.equal(sharedHostFor("203.0.113.7", { hostnames: Array(12).fill("x.com") }), "shared hosting");
+  assert.equal(sharedHostFor("203.0.113.7", { hostnames: ["mysite.com"] }), null);
+  assert.equal(sharedHostFor("185.199.112.1"), null); // just outside GitHub's /22
+});
+
+test("Shodan CVEs on a GitHub Pages IP are not blamed on the customer", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes("internetdb")) {
+      return new Response(JSON.stringify({ ports: [80, 443, 3389], vulns: ["CVE-2020-11023"], tags: [], hostnames: [] }), { status: 200 });
+    }
+    return new Response("{}", { status: 404 });
+  };
+  try {
+    const shared = await scanVulnIntel(["185.199.110.153"]);
+    assert.deepEqual(shared.findings.map((f) => f.key), ["vuln:shared-hosting"]);
+    assert.equal(shared.findings[0].severity, "info");
+
+    const dedicated = await scanVulnIntel(["203.0.113.7"]);
+    assert.ok(dedicated.findings.some((f) => f.key === "network:port-3389"));
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
