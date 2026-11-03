@@ -20,7 +20,7 @@
 import tls from "node:tls";
 import { finding } from "./findings.mjs";
 
-export const USER_AGENT = "VigiaRecon-Scanner/1.0 (+https://chadswilliamson.github.io/VigiaRecon/)";
+export const USER_AGENT = "VigiaRecon-Scanner/1.0 (+https://vigiarecon.com/)";
 const TIMEOUT_MS = 10000;
 
 // ---- Header analysis (pure, testable) ------------------------------

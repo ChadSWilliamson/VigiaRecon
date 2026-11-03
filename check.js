@@ -177,7 +177,7 @@ async function runSecurityForDomain(domainState, { domainId, hostname, email, ve
     await sendAlert(
       email,
       `${SEVERITY_ICON.get(worst) || ""} ${fresh.length} new security finding(s) for ${hostname} — score ${report.score}/100`,
-      `Vigía Recon looked at ${hostname} the way an attacker would, from the outside.\n\nScore: ${report.score}/100 (grade ${report.grade})\n\n${lines.join("\n\n")}\n\nFull report in your dashboard: https://chadswilliamson.github.io/VigiaRecon/dashboard.html`
+      `Vigía Recon looked at ${hostname} the way an attacker would, from the outside.\n\nScore: ${report.score}/100 (grade ${report.grade})\n\n${lines.join("\n\n")}\n\nFull report in your dashboard: https://vigiarecon.com/dashboard.html`
     );
   }
 

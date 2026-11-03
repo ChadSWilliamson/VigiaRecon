@@ -8,7 +8,7 @@
 -- ---- 1. Domain ownership verification ----------------------------
 
 -- Each domain gets a random token. The customer proves ownership by
--- adding it as a DNS TXT record: certwatch-verify=<token>
+-- adding it as a DNS TXT record: vigiarecon-verify=<token>
 alter table domains add column if not exists verify_token text
   not null default replace(gen_random_uuid()::text, '-', '');
 alter table domains add column if not exists verified_at timestamptz;

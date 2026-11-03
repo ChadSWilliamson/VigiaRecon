@@ -7,7 +7,7 @@
  *
  * Without --token, only passive checks run. With --token, the
  * active checks run ONLY if that domain's DNS has the matching
- * certwatch-verify TXT record — same ownership rule as production.
+ * vigiarecon-verify TXT record — same ownership rule as production.
  */
 
 import { runSecurityScan } from "./security-scan.mjs";
