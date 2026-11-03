@@ -12,10 +12,14 @@
  *
  * HOW TO RUN IT:
  *   node test-email.mjs
+ *   TEST_TO="someone@example.com" node test-email.mjs   (send somewhere else)
+ *
+ * Or skip all of the above: GitHub → Actions → "Send test email" →
+ * Run workflow. It uses the RESEND_API_KEY secret already saved there.
  */
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const YOUR_EMAIL = "zonaazulcrconsulting@gmail.com";
+const YOUR_EMAIL = process.env.TEST_TO || "zonaazulcrconsulting@gmail.com";
 
 async function main() {
   if (!RESEND_API_KEY) {
@@ -48,6 +52,7 @@ async function main() {
   } else {
     console.log(`❌ Failed (status ${res.status})`);
     console.log(`   ${JSON.stringify(data)}`);
+    process.exitCode = 1; // makes the GitHub Actions run show red on failure
   }
 }
 

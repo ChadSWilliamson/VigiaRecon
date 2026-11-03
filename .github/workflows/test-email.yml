@@ -1,0 +1,31 @@
+name: Send test email
+
+# Manual button only: Actions → Send test email → Run workflow.
+# Sends one email through Resend from alerts@vigiarecon.com to confirm
+# alert delivery works.
+
+on:
+  workflow_dispatch:
+    inputs:
+      to:
+        description: "Send the test email to"
+        required: true
+        default: "zonaazulcrconsulting@gmail.com"
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Send it
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          TEST_TO: ${{ inputs.to }}
+        run: node test-email.mjs
