@@ -119,7 +119,7 @@ async function sendAlert(toEmail, subject, body) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "Vigía Recon <onboarding@resend.dev>",
+      from: "Vigía Recon <alerts@vigiarecon.com>",
       to: toEmail,
       subject,
       text: body,
