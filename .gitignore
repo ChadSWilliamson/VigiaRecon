@@ -2,3 +2,10 @@ node_modules/
 .env
 .DS_Store
 *.log
+
+# Never commit private keys or certificates
+*.key
+*.pem
+*.pfx
+*.p12
+vigia-keys/
