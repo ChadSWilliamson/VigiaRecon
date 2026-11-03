@@ -27,6 +27,49 @@ import { USER_AGENT } from "./web-exposure.mjs";
 const MAX_CVES_ENRICHED = 25; // be polite to a free service
 const TIMEOUT_MS = 10000;
 
+// Shared hosting and CDN edge addresses. One of these IPs serves
+// thousands or millions of unrelated sites, so whatever Shodan saw on
+// it (open ports, an old jQuery on some other site) says nothing about
+// the customer. We skip IP-level results for these and say so.
+const SHARED_HOST_RANGES = [
+  ["GitHub Pages", ["185.199.108.0/22"]],
+  ["Cloudflare", ["173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22", "141.101.64.0/18",
+    "108.162.192.0/18", "190.93.240.0/20", "188.114.96.0/20", "197.234.240.0/22", "198.41.128.0/17",
+    "162.158.0.0/15", "104.16.0.0/13", "104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22"]],
+  ["Fastly", ["151.101.0.0/16", "199.232.0.0/16"]],
+  ["Netlify", ["75.2.60.5/32"]],
+  ["Vercel", ["76.76.21.0/24"]],
+  ["Shopify", ["23.227.38.0/23"]],
+  ["Squarespace", ["198.185.159.0/24", "198.49.23.0/24"]],
+  ["Firebase Hosting", ["199.36.158.0/24"]],
+];
+
+function ipToInt(ip) {
+  return ip.split(".").reduce((n, octet) => (n << 8) + Number(octet), 0) >>> 0;
+}
+
+function inCidr(ip, cidr) {
+  const [base, bits] = cidr.split("/");
+  const mask = bits === "0" ? 0 : (~0 << (32 - Number(bits))) >>> 0;
+  return (ipToInt(ip) & mask) === (ipToInt(base) & mask);
+}
+
+/**
+ * Returns the provider name if this IP is shared infrastructure, else null.
+ * Uses known provider ranges, Shodan's own "cdn" tag, and the number of
+ * unrelated hostnames Shodan has seen on the address.
+ */
+export function sharedHostFor(ip, data = {}) {
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
+    for (const [name, ranges] of SHARED_HOST_RANGES) {
+      if (ranges.some((r) => inCidr(ip, r))) return name;
+    }
+  }
+  if ((data.tags || []).includes("cdn")) return "a CDN";
+  if ((data.hostnames || []).length >= 10) return "shared hosting";
+  return null;
+}
+
 // Services that shouldn't be reachable from the whole internet.
 const RISKY_PORTS = {
   21: { name: "FTP", severity: "medium", why: "sends passwords unencrypted and is a frequent brute-force target" },
@@ -132,12 +175,12 @@ export async function scanVulnIntel(ips, tech = []) {
       console.error(`  InternetDB lookup failed for ${ip}:`, err.message);
       continue;
     }
-    if (!data) continue;
-    hosts.push({ ip, ports: data.ports || [], tags: data.tags || [] });
+    const shared = sharedHostFor(ip, data || {});
+    hosts.push({ ip, ports: data?.ports || [], tags: data?.tags || [], shared });
 
-    // Shared CDN edge IPs belong to Cloudflare/Akamai/etc., not the
-    // customer — their ports and CVEs would be misleading.
-    if ((data.tags || []).includes("cdn")) continue;
+    // Shared hosting / CDN IPs belong to the provider, not the customer.
+    if (shared) continue;
+    if (!data) continue;
 
     findings.push(...analyzePorts(ip, data.ports || []));
     for (const id of data.vulns || []) {
@@ -169,5 +212,15 @@ export async function scanVulnIntel(ips, tech = []) {
     ));
   }
 
-  return { findings, hosts, behindCdn: hosts.some((h) => h.tags.includes("cdn")) };
+  const sharedWith = [...new Set(hosts.map((h) => h.shared).filter(Boolean))];
+  if (sharedWith.length) {
+    findings.push(finding(
+      "vuln:shared-hosting", "network", "info",
+      `Hosted on shared infrastructure (${sharedWith.join(", ")})`,
+      "Your site's IP address also serves many other sites, so server-level results for it (open ports, server software CVEs) belong to the provider and aren't counted against you.",
+      "Nothing to do here. Patching those servers is the provider's job; keep your own site's code and plugins up to date."
+    ));
+  }
+
+  return { findings, hosts, behindCdn: sharedWith.length > 0 };
 }
