@@ -1,6 +1,6 @@
 # Vigía Recon
 
-A full-stack SSL, domain, and DNS monitoring tool — built solo, end-to-end, as a hands-on learning project covering backend automation, database design, authentication, and frontend development.
+A full-stack website monitoring and external attack-surface scanning tool: daily SSL, domain, and DNS checks plus an attacker's-view security scan (email spoofing defenses, exposed services, known CVEs, web hardening, leaked files). Built solo, end-to-end, as a hands-on learning project covering backend automation, security engineering, database design, authentication, and frontend development.
 
 **Live at:** [vigiarecon.com](https://vigiarecon.com)
 
@@ -8,7 +8,7 @@ A full-stack SSL, domain, and DNS monitoring tool — built solo, end-to-end, as
 
 ## What it does
 
-Vigía Recon watches a website's "vitals" and alerts the owner before something breaks:
+Vigía Recon watches a website's "vitals" and alerts the owner before something breaks, then scores what an attacker can see from the outside:
 
 - **SSL certificate monitoring** — flags certificates expiring within 30/14/3 days
 - **Domain expiration monitoring** — via RDAP (with a WHOIS API fallback for domains RDAP doesn't cover)

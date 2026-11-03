@@ -39,7 +39,7 @@ async function main() {
       from: "Vigía Recon <alerts@vigiarecon.com>",
       to: YOUR_EMAIL,
       subject: "⚠️ Test alert from Vigía Recon",
-      text: "If you're reading this, your Vigía Recon alert system works. This is exactly what a real SSL or domain expiration warning will look like.",
+      text: "If you're reading this, your Vigía Recon alert system works. Real alerts arrive from this same address: SSL and domain expiration warnings, DNS changes, and new findings from the attacker's-view security scan.",
     }),
   });
 
