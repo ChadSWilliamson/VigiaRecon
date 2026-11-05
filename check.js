@@ -11,6 +11,10 @@
  * email spoofing defenses, web exposure, known CVEs, and — for
  * domains the customer has verified via DNS — active checks for
  * leaked files like .git and .env.
+ *
+ * And, for customers who connected a Microsoft 365 tenant, the
+ * read-only account check (m365-security.mjs): two-factor coverage,
+ * admin count, and mail forwarded outside the company.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -21,12 +25,16 @@ import { getDnsSnapshot, hasDnsChanged } from "./dns-check.mjs";
 import { extractSubdomains, checkSubdomainTakeovers } from "./subdomain-takeover.mjs";
 import { runSecurityScan } from "./security-scan.mjs";
 import { isDomainVerified } from "./domain-verify.mjs";
-import { ALERT_SEVERITIES } from "./findings.mjs";
+import { ALERT_SEVERITIES, scoreFindings, gradeForScore, sortFindings } from "./findings.mjs";
+import { scanM365Tenant } from "./m365-security.mjs";
 
 const ALERT_THRESHOLDS = [30, 14, 3]; // days out
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const M365_CLIENT_ID = process.env.M365_CLIENT_ID;
+const M365_CERT_PEM = process.env.M365_CERT_PEM;
+const M365_KEY_PEM = process.env.M365_KEY_PEM;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -187,7 +195,75 @@ async function runSecurityForDomain(domainState, { domainId, hostname, email, ve
   domainState.lastSecurityScanAt = report.scannedAt;
 }
 
-// ---- 5. Main runner ------------------------------------------------
+// ---- 5. Microsoft 365 account checks -------------------------------
+
+async function runAccountChecks() {
+  if (!M365_CLIENT_ID || !M365_CERT_PEM || !M365_KEY_PEM) {
+    console.log("\nAccount checks: skipped (Microsoft 365 secrets not set)");
+    return;
+  }
+
+  const { data: connections, error } = await supabase
+    .from("tenant_connections")
+    .select("id, provider, tenant_id, alerted_keys, accounts(email)")
+    .eq("provider", "microsoft");
+  if (error) {
+    console.error("\nAccount checks: couldn't load connections:", error.message);
+    return;
+  }
+
+  for (const c of connections) {
+    const email = c.accounts?.email;
+    console.log(`\nChecking Microsoft 365 tenant ${c.tenant_id} (${email})...`);
+    const update = { last_scan_at: new Date().toISOString() };
+
+    try {
+      const { findings, summary } = await scanM365Tenant({
+        tenantId: c.tenant_id,
+        clientId: M365_CLIENT_ID,
+        certPem: M365_CERT_PEM,
+        keyPem: M365_KEY_PEM,
+      });
+      const sorted = sortFindings(findings);
+      const score = scoreFindings(sorted);
+      console.log(`  Accounts: score ${score} (${gradeForScore(score)}), ${sorted.length} finding(s), ${summary.billableUsers} users`);
+
+      const alertable = sorted.filter((f) => ALERT_SEVERITIES.has(f.severity));
+      const alreadySent = new Set(c.alerted_keys || []);
+      const fresh = alertable.filter((f) => !alreadySent.has(f.key));
+
+      if (fresh.length > 0 && email) {
+        console.log(`  → Sending account alert (${fresh.length} new) to ${email}`);
+        const lines = fresh.map(
+          (f) => `${SEVERITY_ICON.get(f.severity) || ""} [${f.severity.toUpperCase()}] ${f.title}\n   ${f.detail}\n   Fix: ${f.fix}`
+        );
+        await sendAlert(
+          email,
+          `${SEVERITY_ICON.get(fresh[0].severity) || ""} ${fresh.length} new Microsoft 365 account finding(s) — score ${score}/100`,
+          `Vigía Recon checked your Microsoft 365 accounts (read-only).\n\nAccounts score: ${score}/100 (grade ${gradeForScore(score)})\n\n${lines.join("\n\n")}\n\nFull report in your dashboard: https://vigiarecon.com/dashboard.html`
+        );
+      }
+
+      Object.assign(update, {
+        last_error: null,
+        account_score: score,
+        account_findings: sorted,
+        alerted_keys: alertable.map((f) => f.key),
+        billable_users: summary.billableUsers,
+        summary,
+      });
+    } catch (err) {
+      // e.g. the customer revoked the app in Microsoft. Keep old results, record why.
+      console.error("  Account check failed:", err.message);
+      update.last_error = err.message.slice(0, 300);
+    }
+
+    const { error: saveErr } = await supabase.from("tenant_connections").update(update).eq("id", c.id);
+    if (saveErr) console.error("  Couldn't save account results:", saveErr.message);
+  }
+}
+
+// ---- 6. Main runner ------------------------------------------------
 
 async function runChecks() {
   const domains = await loadDomainsToCheck();
@@ -322,6 +398,8 @@ async function runChecks() {
 
   await saveState(state);
   console.log("\nSaved alert state to Supabase.");
+
+  await runAccountChecks();
 }
 
 console.log("Starting Vigía Recon check run...\n");
