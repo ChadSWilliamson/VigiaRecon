@@ -35,4 +35,7 @@ jobs:
           WHOIS_API_KEY: ${{ secrets.WHOIS_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          M365_CLIENT_ID: ${{ secrets.M365_CLIENT_ID }}
+          M365_CERT_PEM: ${{ secrets.M365_CERT_PEM }}
+          M365_KEY_PEM: ${{ secrets.M365_KEY_PEM }}
         run: node check.js

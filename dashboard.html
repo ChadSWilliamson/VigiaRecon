@@ -228,6 +228,12 @@
     <div id="empty-state" class="empty-state hidden">
       No domains yet. Add one above to start monitoring it.
     </div>
+
+    <div id="accounts-section" class="hidden" style="margin-top:44px;">
+      <h1 style="display:inline-block; border-bottom:6px solid var(--avocado); padding-bottom:4px;">Your accounts</h1>
+      <p class="subtext">Read-only checks of your Microsoft 365 sign-in security.</p>
+      <div id="tenant-list" class="domain-list"></div>
+    </div>
   </div>
 
 </main>
@@ -445,6 +451,86 @@
     }
 
     await loadDomains();
+    await loadTenants();
+  }
+
+  async function loadTenants() {
+    const section = document.getElementById("accounts-section");
+    const list = document.getElementById("tenant-list");
+    const { data, error } = await db
+      .from("tenant_connections")
+      .select("id, provider, tenant_id, display_name, connected_at, last_scan_at, last_error, account_score, account_findings, billable_users")
+      .order("connected_at", { ascending: true });
+
+    // No table yet, or nothing connected: keep the section out of the way.
+    if (error || !data || data.length === 0) {
+      section.classList.add("hidden");
+      return;
+    }
+    section.classList.remove("hidden");
+    list.innerHTML = data.map(renderTenant).join("");
+
+    list.querySelectorAll("[data-toggle]").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.getElementById(btn.getAttribute("data-toggle")).classList.toggle("hidden");
+      });
+    });
+    list.querySelectorAll(".disconnect-btn").forEach(function(btn) {
+      btn.addEventListener("click", async function() {
+        if (!confirm("Disconnect this Microsoft 365 account? Its results will be deleted. To fully revoke access, also remove the Vigía Recon Scanner app under Enterprise apps in Microsoft Entra.")) return;
+        await db.from("tenant_connections").delete().eq("id", btn.getAttribute("data-id"));
+        await loadTenants();
+      });
+    });
+  }
+
+  function renderFindings(findings, scannedAt) {
+    if (!scannedAt) return '<p class="scan-note">Not scanned yet. Results appear after the next daily run.</p>';
+    if (!findings.length) return '<p class="scan-note">No issues found. Nice.</p>';
+    return findings.map(function(f) {
+      const sev = ["critical", "high", "medium", "low", "info"].indexOf(f.severity) > -1 ? f.severity : "info";
+      return '<div class="finding">' +
+        '<div class="finding-head"><span class="sev sev-' + sev + '">' + sev + '</span>' +
+        '<span class="finding-title">' + escapeHtml(f.title) + '</span></div>' +
+        '<div class="finding-detail">' + escapeHtml(f.detail) + '</div>' +
+        '<div class="finding-fix"><b>Fix:</b> ' + escapeHtml(f.fix) + '</div>' +
+      '</div>';
+    }).join("") + '<p class="scan-note">Last scanned ' + escapeHtml(new Date(scannedAt).toLocaleString()) + '</p>';
+  }
+
+  function renderTenant(t) {
+    const id = escapeHtml(t.id);
+    const findings = t.account_findings || [];
+    const grade = gradeFor(t.account_score);
+    const counts = { critical: 0, high: 0, medium: 0 };
+    findings.forEach(function(f) { if (f.severity in counts) counts[f.severity]++; });
+
+    const gradeBox = grade
+      ? '<div class="grade g-' + grade + '">' + grade + '<small>' + escapeHtml(t.account_score) + '</small></div>'
+      : '<div class="grade g-none" title="Not scanned yet">–<small>new</small></div>';
+
+    const chips = ['<span class="chip ok">read-only</span>'];
+    if (t.billable_users != null) chips.push('<span class="chip">' + escapeHtml(t.billable_users) + ' users</span>');
+    if (counts.critical) chips.push('<span class="chip" style="color:var(--rust);">' + counts.critical + ' critical</span>');
+    if (counts.high) chips.push('<span class="chip" style="color:var(--rust);">' + counts.high + ' high</span>');
+    if (counts.medium) chips.push('<span class="chip warn">' + counts.medium + ' medium</span>');
+    if (t.last_error) chips.push('<span class="chip warn" title="' + escapeHtml(t.last_error) + '">last scan failed</span>');
+
+    return '<div class="domain-card">' +
+      '<div class="domain-top">' +
+        gradeBox +
+        '<div style="flex:1; min-width:0;">' +
+          '<div class="domain-name" style="overflow-wrap:anywhere;">' + escapeHtml(t.display_name || "Microsoft 365") + '</div>' +
+          '<div class="domain-added">Connected ' + escapeHtml(new Date(t.connected_at).toLocaleDateString()) + '</div>' +
+        '</div>' +
+        '<button class="remove-btn disconnect-btn" data-id="' + id + '">Disconnect</button>' +
+      '</div>' +
+      '<div class="domain-meta">' + chips.join("") + '</div>' +
+      '<div style="display:flex; gap:16px; margin-top:12px;">' +
+        '<button class="link-btn" data-toggle="acct-' + id + '">Account findings (' + findings.length + ')</button>' +
+      '</div>' +
+      '<div class="panel hidden" id="acct-' + id + '">' + renderFindings(findings, t.last_scan_at) + '</div>' +
+    '</div>';
   }
 
   async function loadDomains() {
